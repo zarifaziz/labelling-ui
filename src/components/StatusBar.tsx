@@ -5,8 +5,8 @@ import { useEval } from '@/context/EvalContext';
 export function StatusBar() {
   const { items } = useEval();
 
-  const passes = items.filter((item) => item.label === 'pass').length;
-  const fails = items.filter((item) => item.label === 'fail').length;
+  const passes = items.filter((item) => item.human_outcome === 'PASS').length;
+  const fails = items.filter((item) => item.human_outcome === 'FAIL').length;
   const reviewed = passes + fails;
   const total = items.length;
 
