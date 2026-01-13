@@ -78,47 +78,58 @@ function QuestionCard({
   question: string;
   answer: string;
 }) {
-  const colors = {
-    easy: 'from-emerald-500/20 to-emerald-500/5 border-emerald-500/30',
-    medium: 'from-amber-500/20 to-amber-500/5 border-amber-500/30',
-    hard: 'from-rose-500/20 to-rose-500/5 border-rose-500/30',
+  const styles = {
+    easy: {
+      bg: 'bg-[#ECFDF5]',
+      border: 'border-[#A7F3D0]',
+      badgeBg: 'bg-[#10B981]',
+      badgeText: 'text-white',
+    },
+    medium: {
+      bg: 'bg-[#FEF3C7]',
+      border: 'border-[#FCD34D]',
+      badgeBg: 'bg-[#F59E0B]',
+      badgeText: 'text-white',
+    },
+    hard: {
+      bg: 'bg-[#FEE2E2]',
+      border: 'border-[#FCA5A5]',
+      badgeBg: 'bg-[#EF4444]',
+      badgeText: 'text-white',
+    },
   };
 
-  const badges = {
-    easy: 'bg-emerald-500/20 text-emerald-400',
-    medium: 'bg-amber-500/20 text-amber-400',
-    hard: 'bg-rose-500/20 text-rose-400',
-  };
+  const style = styles[difficulty];
 
   return (
     <div
-      className={`rounded-lg bg-gradient-to-br ${colors[difficulty]} border p-5`}
+      className={`rounded-xl ${style.bg} border-2 ${style.border} p-6 shadow-sm`}
     >
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-4">
         <span
-          className={`px-2 py-0.5 rounded text-xs font-medium uppercase ${badges[difficulty]}`}
+          className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${style.badgeBg} ${style.badgeText}`}
         >
           {difficulty}
         </span>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-5">
         <div>
-          <h4 className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
+          <h4 className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-3">
             Question
           </h4>
           <p
-            className="text-slate-200 leading-relaxed"
+            className="text-gray-900 leading-relaxed text-base"
             dangerouslySetInnerHTML={{ __html: renderLatex(question) }}
           />
         </div>
 
         <div>
-          <h4 className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
+          <h4 className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-3">
             Answer
           </h4>
           <p
-            className="text-slate-300 font-mono"
+            className="text-gray-800 font-mono text-sm bg-white/60 rounded-lg p-3 border border-gray-200"
             dangerouslySetInnerHTML={{ __html: renderLatex(answer) }}
           />
         </div>

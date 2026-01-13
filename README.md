@@ -11,6 +11,10 @@ A custom annotation tool for AI evaluation data. Built with Next.js, TypeScript,
 - 💾 **Auto-save** - Data persists to localStorage
 - 📤 **Export CSV** - Download labeled data
 
+## 🚀 Live Demo
+
+**Production**: https://labelling-o2w1qe1m9-zarifazizs-projects.vercel.app
+
 ## Getting Started
 
 ### Installation
@@ -26,6 +30,15 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+### Deployment
+
+This app is deployed on Vercel. See `DEPLOYMENT.md` for detailed deployment instructions.
+
+```bash
+# Deploy to production
+vercel --prod
+```
 
 ## Usage
 
