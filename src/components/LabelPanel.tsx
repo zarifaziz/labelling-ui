@@ -69,7 +69,7 @@ export function LabelPanel() {
 
   if (!selectedItem) {
     return (
-      <aside className="w-80 bg-white border-l border-gray-200 p-4 shadow-sm">
+      <aside className="w-96 bg-white border-l border-gray-200 p-4 shadow-sm">
         <h2 className="text-sm font-semibold text-gray-700 mb-3">Label</h2>
         <p className="text-sm text-gray-500">Select an example to label</p>
       </aside>
@@ -79,7 +79,7 @@ export function LabelPanel() {
   const currentIndex = items.findIndex((i) => i.id === selectedId);
 
   return (
-    <aside className="w-80 bg-white border-l border-gray-200 flex flex-col shadow-sm">
+    <aside className="w-96 bg-white border-l border-gray-200 flex flex-col shadow-sm">
       {/* Outcome Toggle */}
       <div className="p-5 border-b border-gray-200">
         <h2 className="text-sm font-semibold text-gray-700 mb-4">Outcome</h2>
