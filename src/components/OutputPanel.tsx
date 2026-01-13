@@ -101,13 +101,15 @@ function RenderField({ fieldKey, value }: { fieldKey: string; value: any }) {
   const isQuestionAnswer = 
     isObject && 'question' in value && 'answer' in value;
 
-  // Question-answer pairs (from exitticket, etc)
+  // Question-answer pairs (from exitticket, scaffolded subquestions, multiple_choice, etc)
   if (isQuestionAnswer) {
     return (
       <QuestionAnswerCard
         difficulty={fieldKey}
         question={value.question}
         answer={value.answer}
+        answerOptions={value.answerOptions}
+        nodeType={value.nodeType}
       />
     );
   }
@@ -239,6 +241,8 @@ function QuestionSetRenderer({ output }: { output: any }) {
           difficulty={difficulty}
           question={data.question}
           answer={data.answer}
+          answerOptions={data.answerOptions}
+          nodeType={data.nodeType}
         />
       ))}
     </div>
@@ -247,15 +251,20 @@ function QuestionSetRenderer({ output }: { output: any }) {
 
 /**
  * Styled card for question-answer pairs
+ * Supports answerOptions (for multiple choice) and nodeType (for scaffolded subquestions)
  */
 function QuestionAnswerCard({
   difficulty,
   question,
   answer,
+  answerOptions,
+  nodeType,
 }: {
   difficulty: string;
   question: string;
   answer: string;
+  answerOptions?: string[] | null;
+  nodeType?: string;
 }) {
   const difficultyLower = difficulty.toLowerCase();
   
@@ -286,6 +295,13 @@ function QuestionAnswerCard({
     },
   };
 
+  // Node type styles for subquestion badges
+  const nodeTypeStyles: Record<string, { bg: string; text: string }> = {
+    multiplechoice: { bg: 'bg-blue-100', text: 'text-blue-700' },
+    shortanswer: { bg: 'bg-amber-100', text: 'text-amber-700' },
+    openended: { bg: 'bg-purple-100', text: 'text-purple-700' },
+  };
+
   const style = styles[difficultyLower] || {
     bg: 'bg-gray-50',
     border: 'border-gray-300',
@@ -293,16 +309,27 @@ function QuestionAnswerCard({
     badgeText: 'text-white',
   };
 
+  const nodeTypeStyle = nodeType 
+    ? nodeTypeStyles[nodeType.toLowerCase().replace(/\s+/g, '')] || { bg: 'bg-gray-100', text: 'text-gray-600' }
+    : null;
+
   return (
     <div
       className={`rounded-xl ${style.bg} border-2 ${style.border} p-6 shadow-sm`}
     >
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
         <span
           className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${style.badgeBg} ${style.badgeText}`}
         >
           {difficulty}
         </span>
+        {nodeType && nodeTypeStyle && (
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-medium ${nodeTypeStyle.bg} ${nodeTypeStyle.text}`}
+          >
+            {nodeType}
+          </span>
+        )}
       </div>
 
       <div className="space-y-5">
@@ -315,6 +342,41 @@ function QuestionAnswerCard({
             dangerouslySetInnerHTML={{ __html: renderLatex(question) }}
           />
         </div>
+
+        {/* Answer Options (for multiple choice questions) */}
+        {answerOptions && answerOptions.length > 0 && (
+          <div>
+            <h4 className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-3">
+              Answer Options
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {answerOptions.map((option, index) => {
+                const isCorrect = option === answer;
+                return (
+                  <div
+                    key={index}
+                    className={`px-3 py-2 rounded-lg text-sm border ${
+                      isCorrect
+                        ? 'bg-green-50 border-green-300 text-green-800 font-medium'
+                        : 'bg-white/60 border-gray-200 text-gray-700'
+                    }`}
+                  >
+                    <span className="font-semibold text-gray-500 mr-2">
+                      {String.fromCharCode(65 + index)}.
+                    </span>
+                    <span
+                      className="prose prose-sm max-w-none inline"
+                      dangerouslySetInnerHTML={{ __html: renderLatex(option) }}
+                    />
+                    {isCorrect && (
+                      <span className="ml-2 text-green-600">✓</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {answer && (
           <div>
