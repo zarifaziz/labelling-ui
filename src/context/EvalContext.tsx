@@ -10,6 +10,7 @@ interface EvalContextType {
   setSelectedId: (id: string | null) => void;
   selectedItem: EvalItem | null;
   updateItem: (id: string, updates: Partial<EvalItem>) => void;
+  deleteItem: (id: string) => void;
   filename: string;
   setFilename: (name: string) => void;
 }
@@ -76,6 +77,21 @@ export function EvalProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const deleteItem = useCallback((id: string) => {
+    setItemsState((prev) => {
+      const newItems = prev.filter((item) => item.id !== id);
+      // If we deleted the selected item, select the next available one
+      if (selectedId === id && newItems.length > 0) {
+        const deletedIndex = prev.findIndex((item) => item.id === id);
+        const newSelectedIndex = Math.min(deletedIndex, newItems.length - 1);
+        setSelectedId(newItems[newSelectedIndex]?.id || null);
+      } else if (newItems.length === 0) {
+        setSelectedId(null);
+      }
+      return newItems;
+    });
+  }, [selectedId]);
+
   const selectedItem = items.find((item) => item.id === selectedId) || null;
 
   return (
@@ -87,6 +103,7 @@ export function EvalProvider({ children }: { children: ReactNode }) {
         setSelectedId,
         selectedItem,
         updateItem,
+        deleteItem,
         filename,
         setFilename,
       }}
