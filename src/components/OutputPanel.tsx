@@ -23,7 +23,7 @@ export function OutputPanel() {
         {selectedItem.model_critique && (
           <details className="mt-6 bg-white rounded-xl border border-gray-200 shadow-sm">
             <summary className="p-5 cursor-pointer text-sm text-gray-600 hover:text-[#7C3AED] font-medium transition-colors">
-              Model Critique ({selectedItem.model_outcome || 'No outcome'})
+              Model Critique
             </summary>
             <div className="px-5 pb-5 text-sm text-gray-700 whitespace-pre-wrap border-t border-gray-100 pt-4">
               {selectedItem.model_critique}
