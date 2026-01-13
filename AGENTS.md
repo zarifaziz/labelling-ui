@@ -3,6 +3,7 @@
 ## Commands
 - **Dev server**: `npm run dev` (port 3000)
 - **Build**: `npm run build`
+- Always build and check for errors (`npm run build`) before pushing to main, as it deploys to Vercel production.
 - **Lint**: `npm run lint`
 - No test framework configured
 
