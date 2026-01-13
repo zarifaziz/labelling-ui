@@ -181,8 +181,28 @@ function RenderValue({ value }: { value: any }) {
     );
   }
 
-  // String (with LaTeX rendering)
+  // String with newlines - render as bullet list
   const strValue = String(value);
+  if (strValue.includes('\n')) {
+    const items = strValue.split('\n').filter(item => item.trim());
+    if (items.length > 1) {
+      return (
+        <ul className="space-y-2.5">
+          {items.map((item, i) => (
+            <li key={i} className="flex items-start gap-3">
+              <span className="text-[#7C3AED] font-bold text-lg leading-none mt-0.5">•</span>
+              <div
+                className="flex-1 text-gray-700 prose prose-sm max-w-none"
+                dangerouslySetInnerHTML={{ __html: renderLatex(item.trim()) }}
+              />
+            </li>
+          ))}
+        </ul>
+      );
+    }
+  }
+  
+  // String (with LaTeX rendering)
   return (
     <div
       className="prose prose-sm max-w-none"

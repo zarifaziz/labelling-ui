@@ -39,6 +39,15 @@ export function InputPanel() {
                     </li>
                   ))}
                 </ul>
+              ) : typeof value === 'string' && value.includes('\n') ? (
+                <ul className="space-y-2.5">
+                  {value.split('\n').filter(item => item.trim()).map((item, i) => (
+                    <li key={i} className="flex items-start gap-3">
+                      <span className="text-[#7C3AED] font-bold text-lg leading-none mt-0.5">•</span>
+                      <span className="flex-1">{item.trim()}</span>
+                    </li>
+                  ))}
+                </ul>
               ) : (
                 <div className="whitespace-pre-wrap">{formatValue(value)}</div>
               )}
