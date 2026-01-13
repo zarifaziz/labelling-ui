@@ -13,7 +13,8 @@ A custom annotation tool for AI evaluation data. Built with Next.js, TypeScript,
 
 ## 🚀 Live Demo
 
-**Production**: https://labelling-o2w1qe1m9-zarifazizs-projects.vercel.app
+**Production**: https://labelling-o2w1qe1m9-zarifazizs-projects.vercel.app  
+**GitHub**: https://github.com/zarifaziz/labelling-ui
 
 ## Getting Started
 

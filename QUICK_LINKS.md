@@ -1,5 +1,8 @@
 # 🔗 Quick Links
 
+## GitHub Repository
+📦 https://github.com/zarifaziz/labelling-ui
+
 ## Production App
 🚀 https://labelling-o2w1qe1m9-zarifazizs-projects.vercel.app
 
