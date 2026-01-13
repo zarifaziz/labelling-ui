@@ -5,6 +5,7 @@ import { Sidebar } from '@/components/Sidebar';
 import { InputPanel } from '@/components/InputPanel';
 import { OutputPanel } from '@/components/OutputPanel';
 import { LabelPanel } from '@/components/LabelPanel';
+import { StatusBar } from '@/components/StatusBar';
 
 export default function Home() {
   return (
@@ -16,6 +17,7 @@ export default function Home() {
         <OutputPanel />
         <LabelPanel />
       </div>
+      <StatusBar />
     </div>
   );
 }
