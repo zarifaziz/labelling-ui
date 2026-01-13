@@ -55,5 +55,10 @@ export function renderLatex(text: string): string {
     }
   });
 
+  // Convert newlines to HTML line breaks
+  // Do this AFTER math rendering to preserve newlines outside of math
+  result = result.replace(/\\n/g, '<br/>');
+  result = result.replace(/\n/g, '<br/>');
+
   return result;
 }

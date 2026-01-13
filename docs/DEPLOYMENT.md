@@ -125,7 +125,7 @@ For teams:
 ### Google Sheets Import Not Working
 - This is a client-side issue, not deployment
 - User must publish their sheet to web
-- See `GOOGLE_SHEETS_SETUP.md` for details
+- See [GOOGLE_SHEETS_SETUP.md](GOOGLE_SHEETS_SETUP.md) for details
 
 ### App Loads But Looks Broken
 - Check browser console for errors

@@ -34,7 +34,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ### Deployment
 
-This app is deployed on Vercel. See `DEPLOYMENT.md` for detailed deployment instructions.
+This app is deployed on Vercel. See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for detailed deployment instructions.
 
 ```bash
 # Deploy to production
@@ -86,22 +86,13 @@ Click **Export CSV** to download your labeled data with all human critiques and 
 
 ## Google Sheets Setup
 
-To import from Google Sheets, you need to make your sheet publicly accessible:
+To import from Google Sheets, you need to make your sheet publicly accessible. See [`docs/GOOGLE_SHEETS_SETUP.md`](docs/GOOGLE_SHEETS_SETUP.md) for detailed instructions.
 
-### Method 1: Publish to Web (Recommended)
+**Quick steps:**
 1. Open your Google Sheet
 2. Go to **File → Share → Publish to web**
-3. Choose the specific sheet or entire document
-4. Click **Publish**
-5. Copy the sheet URL (e.g., `https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit?gid=YOUR_GID`)
-6. Use this URL in the app
-
-### Method 2: Share Link
-1. Open your Google Sheet
-2. Click the **Share** button
-3. Under "General access", select **Anyone with the link**
-4. Set permission to **Viewer**
-5. Copy the link
+3. Click **Publish**
+4. Copy the sheet URL and paste it in the app
 
 ## Keyboard Shortcuts
 
@@ -150,4 +141,11 @@ src/
 
 ## Example Data
 
-See `public/sample.csv` for an example of the expected format.
+See [`public/sample.csv`](public/sample.csv) for an example of the expected format. Additional samples available in the `public/` directory.
+
+## Documentation
+
+- 📖 [Architecture](docs/ARCHITECTURE.md) - System design and component structure
+- 🚀 [Deployment Guide](docs/DEPLOYMENT.md) - Deploy to Vercel
+- 📊 [Google Sheets Setup](docs/GOOGLE_SHEETS_SETUP.md) - Import data from Google Sheets
+- 🔗 [Quick Links](docs/QUICK_LINKS.md) - Project URLs and commands
