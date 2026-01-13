@@ -29,8 +29,19 @@ export function InputPanel() {
             <dt className="text-xs font-bold text-[#7C3AED] uppercase tracking-wide">
               {formatKey(key)}
             </dt>
-            <dd className="mt-2 text-sm text-gray-800 whitespace-pre-wrap">
-              {formatValue(value)}
+            <dd className="mt-2 text-sm text-gray-800">
+              {Array.isArray(value) ? (
+                <ul className="space-y-2.5">
+                  {value.map((item, i) => (
+                    <li key={i} className="flex items-start gap-3">
+                      <span className="text-[#7C3AED] font-bold text-lg leading-none mt-0.5">•</span>
+                      <span className="flex-1">{String(item)}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="whitespace-pre-wrap">{formatValue(value)}</div>
+              )}
             </dd>
           </div>
         ))}
