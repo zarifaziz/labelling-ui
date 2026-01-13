@@ -150,11 +150,11 @@ function RenderValue({ value }: { value: any }) {
     }
     
     return (
-      <ul className="space-y-2">
+      <ul className="space-y-2.5">
         {value.map((item, i) => (
-          <li key={i} className="flex items-start gap-2">
-            <span className="text-[#7C3AED] mt-0.5">•</span>
-            <div className="flex-1">
+          <li key={i} className="flex items-start gap-3">
+            <span className="text-[#7C3AED] font-bold text-lg leading-none mt-0.5">•</span>
+            <div className="flex-1 text-gray-700">
               <RenderValue value={item} />
             </div>
           </li>
