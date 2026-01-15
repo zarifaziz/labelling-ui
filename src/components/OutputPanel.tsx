@@ -67,6 +67,11 @@ function GenericOutputRenderer({ output }: { output: any }) {
   if (typeof output === 'object') {
     const entries = Object.entries(output);
     
+    // Check if this looks like a misconception output
+    if (isMisconceptionOutput(output)) {
+      return <MisconceptionCard output={output} />;
+    }
+    
     // Check if this looks like a question set (has easy/medium/hard)
     const hasQuestionDifficulties = 
       entries.some(([key]) => ['easy', 'medium', 'hard'].includes(key));
@@ -392,6 +397,208 @@ function QuestionAnswerCard({
       </div>
     </div>
   );
+}
+
+/**
+ * Check if output looks like a misconception slide output
+ */
+function isMisconceptionOutput(output: any): boolean {
+  if (!output || typeof output !== 'object') return false;
+
+  const normalizedKeys = new Set(
+    Object.keys(output).map((key) => normalizeFieldKey(key))
+  );
+
+  // Presence of misconception is the strongest signal
+  if (normalizedKeys.has('misconception')) {
+    return true;
+  }
+
+  // Fallback: enough of the signature fields exist
+  const signatureFields = [
+    'incorrectexample',
+    'correctconcept',
+    'correctexample',
+  ];
+  const matches = signatureFields.filter((field) => normalizedKeys.has(field));
+  return matches.length >= 2;
+}
+
+/**
+ * Misconception card with 2x2 grid layout matching platform design
+ */
+function MisconceptionCard({ output }: { output: any }) {
+  const question = toOptionalString(
+    getOutputField(output, ['question', 'exampleQuestion'])
+  );
+  const misconception = toOptionalString(
+    getOutputField(output, ['misconception'])
+  );
+  const incorrectExample = toOptionalString(
+    getOutputField(output, ['incorrectExample', 'incorrect_example'])
+  );
+  const correctConcept = toOptionalString(
+    getOutputField(output, ['correctConcept', 'correct_concept'])
+  );
+  const correctExample = toOptionalString(
+    getOutputField(output, ['correctExample', 'correct_example'])
+  );
+
+  const { candidateBrainstorm, reasoning, pickedMisconception } = output;
+  const otherFields = Object.fromEntries(
+    Object.entries(output).filter(([key]) => {
+      const normalized = normalizeFieldKey(key);
+      return ![
+        'question',
+        'examplequestion',
+        'misconception',
+        'incorrectexample',
+        'correctconcept',
+        'correctexample',
+        'candidatebrainstorm',
+        'reasoning',
+        'pickedmisconception',
+      ].includes(normalized);
+    })
+  );
+
+  return (
+    <div className="space-y-4">
+      {/* Question at top */}
+      <div className="bg-white rounded-xl border-2 border-gray-200 p-6 shadow-sm">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-lg">📝</span>
+          <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide">
+            Question
+          </h3>
+        </div>
+        <div
+          className="text-xl font-semibold text-gray-900 prose prose-lg max-w-none"
+          dangerouslySetInnerHTML={{ __html: renderLatex(question) }}
+        />
+      </div>
+
+      {/* 2x2 Grid */}
+      <div className="grid grid-cols-2 gap-0 rounded-xl overflow-hidden border-2 border-gray-200 shadow-sm">
+        {/* Top Left - Correct Answer */}
+        <div className="bg-green-50 p-5 border-r border-b border-gray-200">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-green-600 text-lg">✅</span>
+            <h4 className="text-sm font-bold text-green-600">Correct Answer</h4>
+          </div>
+          <div
+            className="text-gray-800 prose prose-sm max-w-none text-lg font-medium"
+            dangerouslySetInnerHTML={{ __html: renderLatex(correctExample) }}
+          />
+        </div>
+
+        {/* Top Right - Incorrect Answer */}
+        <div className="bg-red-50 p-5 border-b border-gray-200">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-red-500 text-lg">❌</span>
+            <h4 className="text-sm font-bold text-red-500">Incorrect Answer</h4>
+          </div>
+          <div
+            className="text-gray-800 prose prose-sm max-w-none text-lg font-medium"
+            dangerouslySetInnerHTML={{ __html: renderLatex(incorrectExample) }}
+          />
+        </div>
+
+        {/* Bottom Left - Correct Concept */}
+        <div className="bg-green-50 p-5 border-r border-gray-200">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-amber-500 text-lg">👍</span>
+            <h4 className="text-sm font-bold text-amber-600">Correct Concept</h4>
+          </div>
+          <div
+            className="text-gray-800 prose prose-sm max-w-none text-lg font-semibold"
+            dangerouslySetInnerHTML={{ __html: renderLatex(correctConcept) }}
+          />
+        </div>
+
+        {/* Bottom Right - Misconception */}
+        <div className="bg-red-50 p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-red-500 text-lg">⊖</span>
+            <h4 className="text-sm font-bold text-red-500">Misconception</h4>
+          </div>
+          <div
+            className="text-gray-800 prose prose-sm max-w-none text-lg font-semibold"
+            dangerouslySetInnerHTML={{ __html: renderLatex(misconception) }}
+          />
+        </div>
+      </div>
+
+      {/* Other fields (if any) */}
+      {Object.keys(otherFields).length > 0 && (
+        <div className="space-y-4">
+          {Object.entries(otherFields).map(([key, value]) => (
+            <RenderField key={key} fieldKey={key} value={value} />
+          ))}
+        </div>
+      )}
+
+      {/* Internal reasoning fields (collapsed) */}
+      {(candidateBrainstorm || reasoning || pickedMisconception) && (
+        <details className="bg-white rounded-xl border border-gray-200 shadow-sm">
+          <summary className="p-4 cursor-pointer text-sm text-gray-500 hover:text-[#7C3AED] font-medium transition-colors">
+            AI Reasoning Details
+          </summary>
+          <div className="px-4 pb-4 space-y-3 border-t border-gray-100 pt-3">
+            {pickedMisconception && (
+              <div>
+                <span className="text-xs font-bold text-gray-500 uppercase">Picked Misconception:</span>
+                <p className="text-sm text-gray-700 mt-1">{pickedMisconception}</p>
+              </div>
+            )}
+            {candidateBrainstorm && (
+              <div>
+                <span className="text-xs font-bold text-gray-500 uppercase">Candidate Brainstorm:</span>
+                <p className="text-sm text-gray-700 mt-1">{candidateBrainstorm}</p>
+              </div>
+            )}
+            {reasoning && (
+              <div>
+                <span className="text-xs font-bold text-gray-500 uppercase">Reasoning:</span>
+                <p className="text-sm text-gray-700 mt-1">{reasoning}</p>
+              </div>
+            )}
+          </div>
+        </details>
+      )}
+    </div>
+  );
+}
+
+function getOutputField(output: Record<string, unknown>, keys: string[]) {
+  const normalizedMap = new Map(
+    Object.entries(output).map(([key, value]) => [
+      normalizeFieldKey(key),
+      value,
+    ])
+  );
+
+  for (const key of keys) {
+    const normalized = normalizeFieldKey(key);
+    if (normalizedMap.has(normalized)) {
+      return normalizedMap.get(normalized);
+    }
+  }
+
+  return undefined;
+}
+
+function toOptionalString(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (value == null) return '';
+  return String(value);
+}
+
+function normalizeFieldKey(key: string) {
+  return key
+    .replace(/_/g, '')
+    .replace(/\s+/g, '')
+    .toLowerCase();
 }
 
 /**
