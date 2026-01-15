@@ -16,7 +16,9 @@ export function LabelPanel() {
   const handleOutcomeChange = useCallback(
     (outcome: 'PASS' | 'FAIL') => {
       if (!selectedItem) return;
-      updateItem(selectedItem.id, { human_outcome: outcome });
+      // Toggle off if clicking the same value
+      const newOutcome = selectedItem.human_outcome === outcome ? '' : outcome;
+      updateItem(selectedItem.id, { human_outcome: newOutcome });
     },
     [selectedItem, updateItem]
   );
