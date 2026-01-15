@@ -480,32 +480,20 @@ function MisconceptionCard({ output }: { output: any }) {
 
       {/* 2x2 Grid */}
       <div className="grid grid-cols-2 gap-0 rounded-xl overflow-hidden border-2 border-gray-200 shadow-sm">
-        {/* Top Left - Correct Answer */}
-        <div className="bg-green-50 p-5 border-r border-b border-gray-200">
+        {/* Top Left - Misconception */}
+        <div className="bg-red-50 p-5 border-r border-b border-gray-200">
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-green-600 text-lg">✅</span>
-            <h4 className="text-sm font-bold text-green-600">Correct Answer</h4>
+            <span className="text-red-500 text-lg">⊖</span>
+            <h4 className="text-sm font-bold text-red-500">Misconception</h4>
           </div>
           <div
-            className="text-gray-800 prose prose-sm max-w-none text-lg font-medium"
-            dangerouslySetInnerHTML={{ __html: renderLatex(correctExample) }}
+            className="text-gray-800 prose prose-sm max-w-none text-lg font-semibold"
+            dangerouslySetInnerHTML={{ __html: renderLatex(misconception) }}
           />
         </div>
 
-        {/* Top Right - Incorrect Answer */}
-        <div className="bg-red-50 p-5 border-b border-gray-200">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-red-500 text-lg">❌</span>
-            <h4 className="text-sm font-bold text-red-500">Incorrect Answer</h4>
-          </div>
-          <div
-            className="text-gray-800 prose prose-sm max-w-none text-lg font-medium"
-            dangerouslySetInnerHTML={{ __html: renderLatex(incorrectExample) }}
-          />
-        </div>
-
-        {/* Bottom Left - Correct Concept */}
-        <div className="bg-green-50 p-5 border-r border-gray-200">
+        {/* Top Right - Correct Concept */}
+        <div className="bg-green-50 p-5 border-b border-gray-200">
           <div className="flex items-center gap-2 mb-3">
             <span className="text-amber-500 text-lg">👍</span>
             <h4 className="text-sm font-bold text-amber-600">Correct Concept</h4>
@@ -516,15 +504,27 @@ function MisconceptionCard({ output }: { output: any }) {
           />
         </div>
 
-        {/* Bottom Right - Misconception */}
-        <div className="bg-red-50 p-5">
+        {/* Bottom Left - Incorrect Answer */}
+        <div className="bg-red-50 p-5 border-r border-gray-200">
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-red-500 text-lg">⊖</span>
-            <h4 className="text-sm font-bold text-red-500">Misconception</h4>
+            <span className="text-red-500 text-lg">❌</span>
+            <h4 className="text-sm font-bold text-red-500">Incorrect Answer</h4>
           </div>
           <div
-            className="text-gray-800 prose prose-sm max-w-none text-lg font-semibold"
-            dangerouslySetInnerHTML={{ __html: renderLatex(misconception) }}
+            className="text-gray-800 prose prose-sm max-w-none text-lg font-medium"
+            dangerouslySetInnerHTML={{ __html: renderLatex(incorrectExample) }}
+          />
+        </div>
+
+        {/* Bottom Right - Correct Answer */}
+        <div className="bg-green-50 p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-green-600 text-lg">✅</span>
+            <h4 className="text-sm font-bold text-green-600">Correct Answer</h4>
+          </div>
+          <div
+            className="text-gray-800 prose prose-sm max-w-none text-lg font-medium"
+            dangerouslySetInnerHTML={{ __html: renderLatex(correctExample) }}
           />
         </div>
       </div>
