@@ -10,6 +10,7 @@ interface EvalContextType {
   setSelectedId: (id: string | null) => void;
   selectedItem: EvalItem | null;
   updateItem: (id: string, updates: Partial<EvalItem>) => void;
+  updateItemField: (id: string, path: string[], value: string) => void;
   deleteItem: (id: string) => void;
   filename: string;
   setFilename: (name: string) => void;
@@ -77,6 +78,21 @@ export function EvalProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const updateItemField = useCallback((id: string, path: string[], value: string) => {
+    setItemsState((prev) =>
+      prev.map((item) => {
+        if (item.id !== id) return item;
+        const newItem = JSON.parse(JSON.stringify(item));
+        let current: Record<string, unknown> = newItem;
+        for (let i = 0; i < path.length - 1; i++) {
+          current = current[path[i]] as Record<string, unknown>;
+        }
+        current[path[path.length - 1]] = value;
+        return newItem;
+      })
+    );
+  }, []);
+
   const deleteItem = useCallback((id: string) => {
     setItemsState((prev) => {
       const newItems = prev.filter((item) => item.id !== id);
@@ -103,6 +119,7 @@ export function EvalProvider({ children }: { children: ReactNode }) {
         setSelectedId,
         selectedItem,
         updateItem,
+        updateItemField,
         deleteItem,
         filename,
         setFilename,

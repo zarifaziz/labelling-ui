@@ -2,9 +2,12 @@
 
 import { useEval } from '@/context/EvalContext';
 import { renderLatex } from '@/lib/latex';
+import { EditableField } from './EditableField';
+
+type OnUpdateFn = (path: string[], value: string) => void;
 
 export function OutputPanel() {
-  const { selectedItem } = useEval();
+  const { selectedItem, updateItemField } = useEval();
 
   if (!selectedItem) {
     return (
@@ -14,10 +17,14 @@ export function OutputPanel() {
     );
   }
 
+  const onUpdate: OnUpdateFn = (path, value) => {
+    updateItemField(selectedItem.id, ['output', ...path], value);
+  };
+
   return (
     <main className="flex-1 bg-[#fffbf5] overflow-y-auto">
       <div className="max-w-4xl mx-auto p-8">
-        <GenericOutputRenderer output={selectedItem.output} />
+        <GenericOutputRenderer output={selectedItem.output} path={[]} onUpdate={onUpdate} />
 
         {/* Model Critique (collapsed by default, for reference) */}
         {selectedItem.model_critique && (
@@ -25,8 +32,11 @@ export function OutputPanel() {
             <summary className="p-5 cursor-pointer text-sm text-gray-600 hover:text-[#7C3AED] font-medium transition-colors">
               Model Critique
             </summary>
-            <div className="px-5 pb-5 text-sm text-gray-700 whitespace-pre-wrap border-t border-gray-100 pt-4">
-              {selectedItem.model_critique}
+            <div className="px-5 pb-5 text-sm text-gray-700 border-t border-gray-100 pt-4">
+              <EditableField
+                value={selectedItem.model_critique}
+                onSave={(newValue) => updateItemField(selectedItem.id, ['model_critique'], newValue)}
+              />
             </div>
           </details>
         )}
@@ -39,7 +49,7 @@ export function OutputPanel() {
  * Generic renderer that can handle any JSON structure
  * Renders objects, arrays, strings, numbers, etc. recursively
  */
-function GenericOutputRenderer({ output }: { output: any }) {
+function GenericOutputRenderer({ output, path, onUpdate }: { output: any; path: string[]; onUpdate: OnUpdateFn }) {
   // Handle null/undefined
   if (output == null) {
     return <div className="text-gray-400 italic">No output</div>;
@@ -55,7 +65,7 @@ function GenericOutputRenderer({ output }: { output: any }) {
               {index + 1}.
             </span>
             <div className="flex-1">
-              <RenderValue value={item} />
+              <RenderValue value={item} path={[...path, String(index)]} onUpdate={onUpdate} />
             </div>
           </div>
         ))}
@@ -69,7 +79,7 @@ function GenericOutputRenderer({ output }: { output: any }) {
     
     // Check if this looks like a misconception output
     if (isMisconceptionOutput(output)) {
-      return <MisconceptionCard output={output} />;
+      return <MisconceptionCard output={output} path={path} onUpdate={onUpdate} />;
     }
     
     // Check if this looks like a question set (has easy/medium/hard)
@@ -77,27 +87,27 @@ function GenericOutputRenderer({ output }: { output: any }) {
       entries.some(([key]) => ['easy', 'medium', 'hard'].includes(key));
     
     if (hasQuestionDifficulties) {
-      return <QuestionSetRenderer output={output} />;
+      return <QuestionSetRenderer output={output} path={path} onUpdate={onUpdate} />;
     }
 
     // Generic object rendering
     return (
       <div className="space-y-4">
         {entries.map(([key, value]) => (
-          <RenderField key={key} fieldKey={key} value={value} />
+          <RenderField key={key} fieldKey={key} value={value} path={[...path, key]} onUpdate={onUpdate} />
         ))}
       </div>
     );
   }
 
   // Primitive values
-  return <RenderValue value={output} />;
+  return <RenderValue value={output} path={path} onUpdate={onUpdate} />;
 }
 
 /**
  * Render a single field (key-value pair)
  */
-function RenderField({ fieldKey, value }: { fieldKey: string; value: any }) {
+function RenderField({ fieldKey, value, path, onUpdate }: { fieldKey: string; value: any; path: string[]; onUpdate: OnUpdateFn }) {
   const label = formatFieldName(fieldKey);
   
   // Special handling for certain field patterns
@@ -115,6 +125,8 @@ function RenderField({ fieldKey, value }: { fieldKey: string; value: any }) {
         answer={value.answer}
         answerOptions={value.answerOptions}
         nodeType={value.nodeType}
+        path={path}
+        onUpdate={onUpdate}
       />
     );
   }
@@ -126,7 +138,7 @@ function RenderField({ fieldKey, value }: { fieldKey: string; value: any }) {
         {label}
       </h3>
       <div className="text-gray-700">
-        <RenderValue value={value} />
+        <RenderValue value={value} path={path} onUpdate={onUpdate} />
       </div>
     </div>
   );
@@ -135,7 +147,7 @@ function RenderField({ fieldKey, value }: { fieldKey: string; value: any }) {
 /**
  * Render any value (string, number, array, object)
  */
-function RenderValue({ value }: { value: any }) {
+function RenderValue({ value, path, onUpdate }: { value: any; path: string[]; onUpdate: OnUpdateFn }) {
   // Null/undefined
   if (value == null) {
     return <span className="text-gray-400 italic">—</span>;
@@ -162,7 +174,7 @@ function RenderValue({ value }: { value: any }) {
           <li key={i} className="flex items-start gap-3">
             <span className="text-[#7C3AED] font-bold text-lg leading-none mt-0.5">•</span>
             <div className="flex-1 text-gray-700">
-              <RenderValue value={item} />
+              <RenderValue value={item} path={[...path, String(i)]} onUpdate={onUpdate} />
             </div>
           </li>
         ))}
@@ -180,7 +192,7 @@ function RenderValue({ value }: { value: any }) {
               {formatFieldName(key)}:
             </span>
             <div className="mt-1">
-              <RenderValue value={val} />
+              <RenderValue value={val} path={[...path, key]} onUpdate={onUpdate} />
             </div>
           </div>
         ))}
@@ -194,26 +206,21 @@ function RenderValue({ value }: { value: any }) {
     const items = strValue.split('\n').filter(item => item.trim());
     if (items.length > 1) {
       return (
-        <ul className="space-y-2.5">
-          {items.map((item, i) => (
-            <li key={i} className="flex items-start gap-3">
-              <span className="text-[#7C3AED] font-bold text-lg leading-none mt-0.5">•</span>
-              <div
-                className="flex-1 text-gray-700 prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{ __html: renderLatex(item.trim()) }}
-              />
-            </li>
-          ))}
-        </ul>
+        <div>
+          <EditableField
+            value={strValue}
+            onSave={(newValue) => onUpdate(path, newValue)}
+          />
+        </div>
       );
     }
   }
   
-  // String (with LaTeX rendering)
+  // String (with LaTeX rendering via EditableField)
   return (
-    <div
-      className="prose prose-sm max-w-none"
-      dangerouslySetInnerHTML={{ __html: renderLatex(strValue) }}
+    <EditableField
+      value={strValue}
+      onSave={(newValue) => onUpdate(path, newValue)}
     />
   );
 }
@@ -221,7 +228,7 @@ function RenderValue({ value }: { value: any }) {
 /**
  * Special renderer for question sets (exitticket/warmup format)
  */
-function QuestionSetRenderer({ output }: { output: any }) {
+function QuestionSetRenderer({ output, path, onUpdate }: { output: any; path: string[]; onUpdate: OnUpdateFn }) {
   const difficulties = ['easy', 'medium', 'hard'] as const;
   const questions = difficulties
     .map(d => ({ difficulty: d, data: output[d] }))
@@ -236,7 +243,7 @@ function QuestionSetRenderer({ output }: { output: any }) {
     <div className="space-y-6">
       {/* Other fields first (like prerequisitesChosen) */}
       {otherFields.map(([key, value]) => (
-        <RenderField key={key} fieldKey={key} value={value} />
+        <RenderField key={key} fieldKey={key} value={value} path={[...path, key]} onUpdate={onUpdate} />
       ))}
 
       {/* Question cards */}
@@ -248,153 +255,124 @@ function QuestionSetRenderer({ output }: { output: any }) {
           answer={data.answer}
           answerOptions={data.answerOptions}
           nodeType={data.nodeType}
+          path={[...path, difficulty]}
+          onUpdate={onUpdate}
         />
       ))}
     </div>
   );
 }
 
-/**
- * Styled card for question-answer pairs
- * Supports answerOptions (for multiple choice) and nodeType (for scaffolded subquestions)
- */
+interface QuestionAnswerCardProps {
+  difficulty?: string;
+  question: string;
+  answer?: string;
+  answerOptions?: string[];
+  nodeType?: string;
+  path: string[];
+  onUpdate: OnUpdateFn;
+}
+
 function QuestionAnswerCard({
   difficulty,
   question,
   answer,
   answerOptions,
   nodeType,
-}: {
-  difficulty: string;
-  question: string;
-  answer: string;
-  answerOptions?: string[] | null;
-  nodeType?: string;
-}) {
-  const difficultyLower = difficulty.toLowerCase();
-  
-  const styles: Record<string, any> = {
-    easy: {
-      bg: 'bg-[#ECFDF5]',
-      border: 'border-[#A7F3D0]',
-      badgeBg: 'bg-[#10B981]',
-      badgeText: 'text-white',
-    },
-    medium: {
-      bg: 'bg-[#FEF3C7]',
-      border: 'border-[#FCD34D]',
-      badgeBg: 'bg-[#F59E0B]',
-      badgeText: 'text-white',
-    },
-    hard: {
-      bg: 'bg-[#FEE2E2]',
-      border: 'border-[#FCA5A5]',
-      badgeBg: 'bg-[#EF4444]',
-      badgeText: 'text-white',
-    },
-    extension: {
-      bg: 'bg-[#EDE9FE]',
-      border: 'border-[#C4B5FD]',
-      badgeBg: 'bg-[#7C3AED]',
-      badgeText: 'text-white',
-    },
+  path,
+  onUpdate,
+}: QuestionAnswerCardProps) {
+  const difficultyColors: Record<string, { bg: string; border: string; text: string; badge: string }> = {
+    easy: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', badge: 'bg-emerald-100' },
+    medium: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', badge: 'bg-amber-100' },
+    hard: { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-700', badge: 'bg-rose-100' },
   };
 
-  // Node type styles for subquestion badges
-  const nodeTypeStyles: Record<string, { bg: string; text: string }> = {
-    multiplechoice: { bg: 'bg-blue-100', text: 'text-blue-700' },
-    shortanswer: { bg: 'bg-amber-100', text: 'text-amber-700' },
-    openended: { bg: 'bg-purple-100', text: 'text-purple-700' },
-  };
+  const colors = difficulty && difficultyColors[difficulty]
+    ? difficultyColors[difficulty]
+    : { bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-700', badge: 'bg-gray-100' };
 
-  const style = styles[difficultyLower] || {
-    bg: 'bg-gray-50',
-    border: 'border-gray-300',
-    badgeBg: 'bg-gray-600',
-    badgeText: 'text-white',
-  };
-
-  const nodeTypeStyle = nodeType 
-    ? nodeTypeStyles[nodeType.toLowerCase().replace(/\s+/g, '')] || { bg: 'bg-gray-100', text: 'text-gray-600' }
-    : null;
+  const showMultipleChoice = answerOptions && answerOptions.length > 0;
+  const isMultipleChoice = nodeType === 'multiple_choice';
 
   return (
-    <div
-      className={`rounded-xl ${style.bg} border-2 ${style.border} p-6 shadow-sm`}
-    >
-      <div className="flex items-center gap-2 mb-4 flex-wrap">
-        <span
-          className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${style.badgeBg} ${style.badgeText}`}
-        >
-          {difficulty}
-        </span>
-        {nodeType && nodeTypeStyle && (
-          <span
-            className={`px-3 py-1 rounded-full text-xs font-medium ${nodeTypeStyle.bg} ${nodeTypeStyle.text}`}
-          >
-            {nodeType}
+    <div className={`rounded-xl border-2 ${colors.border} ${colors.bg} p-6 space-y-4`}>
+      {/* Header with difficulty badge */}
+      <div className="flex items-center gap-3">
+        {difficulty && (
+          <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${colors.badge} ${colors.text}`}>
+            {difficulty}
+          </span>
+        )}
+        {nodeType && (
+          <span className="px-2 py-0.5 rounded text-xs text-gray-500 bg-white border border-gray-200">
+            {formatFieldName(nodeType)}
           </span>
         )}
       </div>
 
-      <div className="space-y-5">
-        <div>
-          <h4 className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-3">
-            Question
-          </h4>
-          <div
-            className="text-gray-900 leading-relaxed text-base prose prose-sm max-w-none"
-            dangerouslySetInnerHTML={{ __html: renderLatex(question) }}
+      {/* Question */}
+      <div>
+        <h4 className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">
+          Question
+        </h4>
+        <div className="text-gray-900 text-lg font-medium">
+          <EditableField
+            value={question}
+            onSave={(newValue) => onUpdate([...path, 'question'], newValue)}
           />
         </div>
+      </div>
 
-        {/* Answer Options (for multiple choice questions) */}
-        {answerOptions && answerOptions.length > 0 && (
-          <div>
-            <h4 className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-3">
-              Answer Options
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {answerOptions.map((option, index) => {
-                const isCorrect = option === answer;
-                return (
-                  <div
-                    key={index}
-                    className={`px-3 py-2 rounded-lg text-sm border ${
-                      isCorrect
-                        ? 'bg-green-50 border-green-300 text-green-800 font-medium'
-                        : 'bg-white/60 border-gray-200 text-gray-700'
-                    }`}
-                  >
-                    <span className="font-semibold text-gray-500 mr-2">
-                      {String.fromCharCode(65 + index)}.
-                    </span>
-                    <span
-                      className="prose prose-sm max-w-none inline"
-                      dangerouslySetInnerHTML={{ __html: renderLatex(option) }}
+      {/* Multiple choice options */}
+      {showMultipleChoice && (
+        <div>
+          <h4 className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-3">
+            Options
+          </h4>
+          <div className="space-y-2">
+            {answerOptions.map((option, idx) => {
+              const isCorrect = isMultipleChoice && answer && 
+                option.toLowerCase().includes(answer.toLowerCase());
+              return (
+                <div 
+                  key={idx}
+                  className={`flex items-start gap-3 p-2 rounded-lg ${
+                    isCorrect ? 'bg-green-100 border border-green-300' : 'bg-white border border-gray-200'
+                  }`}
+                >
+                  <span className="text-sm font-mono text-gray-500 mt-0.5">
+                    {String.fromCharCode(65 + idx)}.
+                  </span>
+                  <div className="prose prose-sm max-w-none inline flex-1">
+                    <EditableField
+                      value={option}
+                      onSave={(newValue) => onUpdate([...path, 'answerOptions', String(idx)], newValue)}
                     />
-                    {isCorrect && (
-                      <span className="ml-2 text-green-600">✓</span>
-                    )}
                   </div>
-                );
-              })}
-            </div>
+                  {isCorrect && (
+                    <span className="ml-2 text-green-600">✓</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
-        )}
+        </div>
+      )}
 
-        {answer && (
-          <div>
-            <h4 className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-3">
-              Answer
-            </h4>
-            <div
-              className="text-gray-800 text-sm bg-white/60 rounded-lg p-3 border border-gray-200 prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: renderLatex(answer) }}
+      {answer && (
+        <div>
+          <h4 className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-3">
+            Answer
+          </h4>
+          <div className="text-gray-800 text-sm bg-white/60 rounded-lg p-3 border border-gray-200">
+            <EditableField
+              value={answer}
+              onSave={(newValue) => onUpdate([...path, 'answer'], newValue)}
             />
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -427,22 +405,18 @@ function isMisconceptionOutput(output: any): boolean {
 /**
  * Misconception card with 2x2 grid layout matching platform design
  */
-function MisconceptionCard({ output }: { output: any }) {
-  const question = toOptionalString(
-    getOutputField(output, ['question', 'exampleQuestion'])
-  );
-  const misconception = toOptionalString(
-    getOutputField(output, ['misconception'])
-  );
-  const incorrectExample = toOptionalString(
-    getOutputField(output, ['incorrectExample', 'incorrect_example'])
-  );
-  const correctConcept = toOptionalString(
-    getOutputField(output, ['correctConcept', 'correct_concept'])
-  );
-  const correctExample = toOptionalString(
-    getOutputField(output, ['correctExample', 'correct_example'])
-  );
+function MisconceptionCard({ output, path, onUpdate }: { output: any; path: string[]; onUpdate: OnUpdateFn }) {
+  const questionKey = findOutputKey(output, ['question', 'exampleQuestion']);
+  const misconceptionKey = findOutputKey(output, ['misconception']);
+  const incorrectExampleKey = findOutputKey(output, ['incorrectExample', 'incorrect_example']);
+  const correctConceptKey = findOutputKey(output, ['correctConcept', 'correct_concept']);
+  const correctExampleKey = findOutputKey(output, ['correctExample', 'correct_example']);
+
+  const question = toOptionalString(questionKey ? output[questionKey] : undefined);
+  const misconception = toOptionalString(misconceptionKey ? output[misconceptionKey] : undefined);
+  const incorrectExample = toOptionalString(incorrectExampleKey ? output[incorrectExampleKey] : undefined);
+  const correctConcept = toOptionalString(correctConceptKey ? output[correctConceptKey] : undefined);
+  const correctExample = toOptionalString(correctExampleKey ? output[correctExampleKey] : undefined);
 
   const { candidateBrainstorm, reasoning, pickedMisconception } = output;
   const otherFields = Object.fromEntries(
@@ -472,10 +446,12 @@ function MisconceptionCard({ output }: { output: any }) {
             Question
           </h3>
         </div>
-        <div
-          className="text-xl font-semibold text-gray-900 prose prose-lg max-w-none"
-          dangerouslySetInnerHTML={{ __html: renderLatex(question) }}
-        />
+        <div className="text-xl font-semibold text-gray-900">
+          <EditableField
+            value={question}
+            onSave={(newValue) => onUpdate([...path, questionKey || 'question'], newValue)}
+          />
+        </div>
       </div>
 
       {/* 2x2 Grid */}
@@ -486,10 +462,12 @@ function MisconceptionCard({ output }: { output: any }) {
             <span className="text-red-500 text-lg">⊖</span>
             <h4 className="text-sm font-bold text-red-500">Misconception</h4>
           </div>
-          <div
-            className="text-gray-800 prose prose-sm max-w-none text-lg font-semibold"
-            dangerouslySetInnerHTML={{ __html: renderLatex(misconception) }}
-          />
+          <div className="text-gray-800 text-lg font-semibold">
+            <EditableField
+              value={misconception}
+              onSave={(newValue) => onUpdate([...path, misconceptionKey || 'misconception'], newValue)}
+            />
+          </div>
         </div>
 
         {/* Top Right - Correct Concept */}
@@ -498,10 +476,12 @@ function MisconceptionCard({ output }: { output: any }) {
             <span className="text-amber-500 text-lg">👍</span>
             <h4 className="text-sm font-bold text-amber-600">Correct Concept</h4>
           </div>
-          <div
-            className="text-gray-800 prose prose-sm max-w-none text-lg font-semibold"
-            dangerouslySetInnerHTML={{ __html: renderLatex(correctConcept) }}
-          />
+          <div className="text-gray-800 text-lg font-semibold">
+            <EditableField
+              value={correctConcept}
+              onSave={(newValue) => onUpdate([...path, correctConceptKey || 'correctConcept'], newValue)}
+            />
+          </div>
         </div>
 
         {/* Bottom Left - Incorrect Answer */}
@@ -510,10 +490,12 @@ function MisconceptionCard({ output }: { output: any }) {
             <span className="text-red-500 text-lg">❌</span>
             <h4 className="text-sm font-bold text-red-500">Incorrect Answer</h4>
           </div>
-          <div
-            className="text-gray-800 prose prose-sm max-w-none text-lg font-medium"
-            dangerouslySetInnerHTML={{ __html: renderLatex(incorrectExample) }}
-          />
+          <div className="text-gray-800 text-lg font-medium">
+            <EditableField
+              value={incorrectExample}
+              onSave={(newValue) => onUpdate([...path, incorrectExampleKey || 'incorrectExample'], newValue)}
+            />
+          </div>
         </div>
 
         {/* Bottom Right - Correct Answer */}
@@ -522,10 +504,12 @@ function MisconceptionCard({ output }: { output: any }) {
             <span className="text-green-600 text-lg">✅</span>
             <h4 className="text-sm font-bold text-green-600">Correct Answer</h4>
           </div>
-          <div
-            className="text-gray-800 prose prose-sm max-w-none text-lg font-medium"
-            dangerouslySetInnerHTML={{ __html: renderLatex(correctExample) }}
-          />
+          <div className="text-gray-800 text-lg font-medium">
+            <EditableField
+              value={correctExample}
+              onSave={(newValue) => onUpdate([...path, correctExampleKey || 'correctExample'], newValue)}
+            />
+          </div>
         </div>
       </div>
 
@@ -533,7 +517,7 @@ function MisconceptionCard({ output }: { output: any }) {
       {Object.keys(otherFields).length > 0 && (
         <div className="space-y-4">
           {Object.entries(otherFields).map(([key, value]) => (
-            <RenderField key={key} fieldKey={key} value={value} />
+            <RenderField key={key} fieldKey={key} value={value} path={[...path, key]} onUpdate={onUpdate} />
           ))}
         </div>
       )}
@@ -548,19 +532,34 @@ function MisconceptionCard({ output }: { output: any }) {
             {pickedMisconception && (
               <div>
                 <span className="text-xs font-bold text-gray-500 uppercase">Picked Misconception:</span>
-                <p className="text-sm text-gray-700 mt-1">{pickedMisconception}</p>
+                <div className="text-sm text-gray-700 mt-1">
+                  <EditableField
+                    value={pickedMisconception}
+                    onSave={(newValue) => onUpdate([...path, 'pickedMisconception'], newValue)}
+                  />
+                </div>
               </div>
             )}
             {candidateBrainstorm && (
               <div>
                 <span className="text-xs font-bold text-gray-500 uppercase">Candidate Brainstorm:</span>
-                <p className="text-sm text-gray-700 mt-1">{candidateBrainstorm}</p>
+                <div className="text-sm text-gray-700 mt-1">
+                  <EditableField
+                    value={candidateBrainstorm}
+                    onSave={(newValue) => onUpdate([...path, 'candidateBrainstorm'], newValue)}
+                  />
+                </div>
               </div>
             )}
             {reasoning && (
               <div>
                 <span className="text-xs font-bold text-gray-500 uppercase">Reasoning:</span>
-                <p className="text-sm text-gray-700 mt-1">{reasoning}</p>
+                <div className="text-sm text-gray-700 mt-1">
+                  <EditableField
+                    value={reasoning}
+                    onSave={(newValue) => onUpdate([...path, 'reasoning'], newValue)}
+                  />
+                </div>
               </div>
             )}
           </div>
@@ -568,6 +567,21 @@ function MisconceptionCard({ output }: { output: any }) {
       )}
     </div>
   );
+}
+
+function findOutputKey(output: Record<string, unknown>, keys: string[]): string | undefined {
+  const normalizedMap = new Map(
+    Object.keys(output).map((key) => [normalizeFieldKey(key), key])
+  );
+
+  for (const key of keys) {
+    const normalized = normalizeFieldKey(key);
+    if (normalizedMap.has(normalized)) {
+      return normalizedMap.get(normalized);
+    }
+  }
+
+  return undefined;
 }
 
 function getOutputField(output: Record<string, unknown>, keys: string[]) {
