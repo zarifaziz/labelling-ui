@@ -26,17 +26,30 @@ export function OutputPanel() {
       <div className="max-w-4xl mx-auto p-8">
         <GenericOutputRenderer output={selectedItem.output} path={[]} onUpdate={onUpdate} />
 
-        {/* Model Critique (collapsed by default, for reference) */}
-        {selectedItem.model_critique && (
+        {/* Model's Decision (collapsed by default, for reference) */}
+        {(selectedItem.model_outcome || selectedItem.model_critique) && (
           <details className="mt-6 bg-white rounded-xl border border-gray-200 shadow-sm">
             <summary className="p-5 cursor-pointer text-sm text-gray-600 hover:text-[#7C3AED] font-medium transition-colors">
-              Model Critique
+              Model&apos;s Decision
             </summary>
-            <div className="px-5 pb-5 text-sm text-gray-700 border-t border-gray-100 pt-4">
-              <EditableField
-                value={selectedItem.model_critique}
-                onSave={(newValue) => updateItemField(selectedItem.id, ['model_critique'], newValue)}
-              />
+            <div className="px-5 pb-5 text-sm text-gray-700 border-t border-gray-100 pt-4 space-y-4">
+              {selectedItem.model_outcome && (
+                <div>
+                  <span className="font-medium text-gray-600">Outcome: </span>
+                  <span className={`font-semibold ${selectedItem.model_outcome === 'PASS' ? 'text-green-600' : selectedItem.model_outcome === 'FAIL' ? 'text-red-600' : 'text-gray-700'}`}>
+                    {selectedItem.model_outcome}
+                  </span>
+                </div>
+              )}
+              {selectedItem.model_critique && (
+                <div>
+                  <div className="font-medium text-gray-600 mb-2">Critique:</div>
+                  <EditableField
+                    value={selectedItem.model_critique}
+                    onSave={(newValue) => updateItemField(selectedItem.id, ['model_critique'], newValue)}
+                  />
+                </div>
+              )}
             </div>
           </details>
         )}
