@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "hyparquet": "^1.24.0",
     "katex": "^0.16.27",
     "next": "16.1.1",
     "papaparse": "^5.5.3",

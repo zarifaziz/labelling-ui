@@ -4,14 +4,17 @@ import { useRef, useState } from 'react';
 import { useEval } from '@/context/EvalContext';
 import { parseCSV, exportCSV, downloadCSV } from '@/lib/csv';
 import { fetchGoogleSheet } from '@/lib/sheets';
-import Papa from 'papaparse';
+import { parseParquet } from '@/lib/parquet';
+import { TraceItem } from '@/types';
 
 export function Header() {
-  const { items, setItems, filename, setFilename } = useEval();
+  const { items, setItems, filename, setFilename, traceAvailable, viewMode, setViewMode, setTraces } = useEval();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const traceFileInputRef = useRef<HTMLInputElement>(null);
   const [showSheetsModal, setShowSheetsModal] = useState(false);
   const [sheetsUrl, setSheetsUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [traceLoadError, setTraceLoadError] = useState<string | null>(null);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -21,10 +24,64 @@ export function Header() {
       const parsed = await parseCSV(file);
       setItems(parsed);
       setFilename(file.name);
+      
+      // Reset trace state
+      setTraces(new Map());
+      setTraceLoadError(null);
+      setViewMode('labelling');
+      
+      // Try to load trace file from same directory
+      // This works when the file input includes the full path (webkitRelativePath)
+      // or when we have access to the file system
+      await tryLoadTraceFile(file);
     } catch (error) {
       console.error('Failed to parse CSV:', error);
       alert('Failed to parse CSV file');
     }
+  };
+
+  const tryLoadTraceFile = async (csvFile: File) => {
+    // Try to find a trace file in the file list
+    // The user needs to select both files, or we need to prompt
+    const traceFilename = csvFile.name.replace(/\.csv$/, '.traces.parquet');
+    
+    // Check if there's a trace file in the same selection
+    const input = fileInputRef.current;
+    if (input?.files) {
+      for (let i = 0; i < input.files.length; i++) {
+        const f = input.files[i];
+        if (f.name === traceFilename || f.name.endsWith('.traces.parquet')) {
+          await loadTraceFile(f);
+          return;
+        }
+      }
+    }
+    
+    // Trace file not found in selection - that's okay, trace mode just won't be available
+    console.log(`Trace file ${traceFilename} not found in selection`);
+  };
+
+  const loadTraceFile = async (file: File) => {
+    try {
+      const traceItems = await parseParquet(file);
+      const traceMap = new Map<string, TraceItem>();
+      for (const trace of traceItems) {
+        if (trace.id) {
+          traceMap.set(trace.id, trace);
+        }
+      }
+      setTraces(traceMap);
+      console.log(`Loaded ${traceMap.size} traces from ${file.name}`);
+    } catch (error) {
+      console.error('Failed to load trace file:', error);
+      setTraceLoadError('Failed to load trace file');
+    }
+  };
+
+  const handleTraceFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await loadTraceFile(file);
   };
 
   const handleExport = () => {
@@ -43,6 +100,9 @@ export function Header() {
     if (confirm('Are you sure you want to clear all data? This cannot be undone.')) {
       setItems([]);
       setFilename('');
+      setTraces(new Map());
+      setViewMode('labelling');
+      setTraceLoadError(null);
       localStorage.removeItem('labelling-ui-data');
       localStorage.removeItem('labelling-ui-filename');
     }
@@ -86,27 +146,34 @@ export function Header() {
 
   const labeledCount = items.filter((i) => i.human_outcome).length;
   const totalCount = items.length;
+  const [showImportMenu, setShowImportMenu] = useState(false);
 
   return (
     <>
-      <header className="h-16 bg-[#4A1D96] border-b border-[#5B21B6] flex items-center justify-between px-6 shadow-md">
-        <div className="flex items-center gap-4">
-          <h1 className="text-xl font-bold text-white tracking-tight">
+      <header className="h-14 bg-[#4A1D96] border-b border-[#5B21B6] flex items-center justify-between px-4 shadow-md">
+        <div className="flex items-center gap-3">
+          <h1 className="text-lg font-bold text-white tracking-tight">
             Eval Labeller
           </h1>
           {filename && (
-            <span className="text-sm text-purple-200 font-mono bg-white/10 px-2 py-1 rounded-md">
-              {filename}
-            </span>
+            <>
+              <span className="text-purple-300">·</span>
+              <span className="text-sm text-purple-200 font-mono truncate max-w-[300px]" title={filename}>
+                {filename}
+              </span>
+            </>
           )}
           {totalCount > 0 && (
-            <span className="text-sm text-purple-200">
-              {labeledCount}/{totalCount} labeled
-            </span>
+            <>
+              <span className="text-purple-300">·</span>
+              <span className="text-sm text-purple-200">
+                {labeledCount}/{totalCount}
+              </span>
+            </>
           )}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <input
             ref={fileInputRef}
             type="file"
@@ -114,37 +181,100 @@ export function Header() {
             onChange={handleFileUpload}
             className="hidden"
           />
-          <button
-            onClick={handleLoadSample}
-            className="px-4 py-2 text-sm bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all font-medium"
-          >
-            Load Sample
-          </button>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="px-4 py-2 text-sm bg-[#7C3AED] hover:bg-[#8B5CF6] text-white rounded-lg transition-all font-medium shadow-sm"
-          >
-            Import CSV
-          </button>
-          <button
-            onClick={() => setShowSheetsModal(true)}
-            className="px-4 py-2 text-sm bg-[#7C3AED] hover:bg-[#8B5CF6] text-white rounded-lg transition-all font-medium shadow-sm"
-          >
-            Import Sheets
-          </button>
+          <input
+            ref={traceFileInputRef}
+            type="file"
+            accept=".parquet"
+            onChange={handleTraceFileUpload}
+            className="hidden"
+          />
+          
+          {/* View Mode Toggle - only show when data loaded */}
+          {items.length > 0 && (
+            <div className="flex items-center bg-white/10 rounded-md p-0.5 mr-2">
+              <button
+                onClick={() => setViewMode('labelling')}
+                className={`px-2.5 py-1 text-xs rounded transition-all font-medium ${
+                  viewMode === 'labelling'
+                    ? 'bg-white text-[#4A1D96]'
+                    : 'text-white hover:bg-white/10'
+                }`}
+              >
+                Label
+              </button>
+              <button
+                onClick={() => traceAvailable ? setViewMode('trace') : traceFileInputRef.current?.click()}
+                className={`px-2.5 py-1 text-xs rounded transition-all font-medium flex items-center gap-1 ${
+                  viewMode === 'trace'
+                    ? 'bg-white text-[#4A1D96]'
+                    : traceAvailable
+                      ? 'text-white hover:bg-white/10'
+                      : 'text-white/60 hover:text-white hover:bg-white/10'
+                }`}
+                title={traceAvailable ? 'View traces' : 'Click to load trace file'}
+              >
+                Trace
+                {!traceAvailable && <span className="text-[10px]">+</span>}
+              </button>
+            </div>
+          )}
+
+          {/* Import dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowImportMenu(!showImportMenu)}
+              className="px-3 py-1.5 text-sm bg-[#7C3AED] hover:bg-[#8B5CF6] text-white rounded-md transition-all font-medium shadow-sm flex items-center gap-1"
+            >
+              Import
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {showImportMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowImportMenu(false)} />
+                <div className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-50">
+                  <button
+                    onClick={() => { fileInputRef.current?.click(); setShowImportMenu(false); }}
+                    className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-left"
+                  >
+                    CSV File
+                  </button>
+                  <button
+                    onClick={() => { setShowSheetsModal(true); setShowImportMenu(false); }}
+                    className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-left"
+                  >
+                    Google Sheets
+                  </button>
+                  <hr className="my-1 border-gray-200" />
+                  <button
+                    onClick={() => { handleLoadSample(); setShowImportMenu(false); }}
+                    className="w-full px-4 py-2 text-sm text-gray-500 hover:bg-gray-100 text-left"
+                  >
+                    Load Sample
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
           <button
             onClick={handleExport}
             disabled={items.length === 0}
-            className="px-4 py-2 text-sm bg-white hover:bg-gray-50 disabled:bg-white/10 disabled:text-purple-300 text-[#4A1D96] rounded-lg transition-all font-medium shadow-sm"
+            className="px-3 py-1.5 text-sm bg-white hover:bg-gray-50 disabled:bg-white/20 disabled:text-purple-300 text-[#4A1D96] rounded-md transition-all font-medium"
           >
-            Export CSV
+            Export
           </button>
+
           {items.length > 0 && (
             <button
               onClick={handleClearData}
-              className="px-4 py-2 text-sm bg-[#FEE2E2] hover:bg-[#FCA5A5] text-[#EF4444] rounded-lg transition-all font-medium"
+              className="px-2 py-1.5 text-sm text-red-300 hover:text-red-200 hover:bg-red-500/20 rounded-md transition-all"
+              title="Clear all data"
             >
-              Clear
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
             </button>
           )}
         </div>

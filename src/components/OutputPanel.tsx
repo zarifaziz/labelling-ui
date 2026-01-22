@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useRef, useEffect } from 'react';
 import { useEval } from '@/context/EvalContext';
 import { EditableField } from './EditableField';
 import { MarkdownRenderer } from './MarkdownRenderer';
@@ -23,14 +24,16 @@ export function OutputPanel() {
 
   // Check if output should be rendered as markdown
   const markdownContent = getMarkdownContent(selectedItem.output);
+  const markdownPath = getMarkdownPath(selectedItem.output);
 
   return (
     <main className="h-full bg-[#fffbf5] overflow-y-auto">
       <div className="max-w-4xl mx-auto p-8">
         {markdownContent !== null ? (
-          <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-            <MarkdownRenderer content={markdownContent} />
-          </div>
+          <EditableMarkdown
+            content={markdownContent}
+            onSave={(newValue) => onUpdate(markdownPath, newValue)}
+          />
         ) : (
           <GenericOutputRenderer output={selectedItem.output} path={[]} onUpdate={onUpdate} />
         )}
@@ -64,6 +67,84 @@ export function OutputPanel() {
         )}
       </div>
     </main>
+  );
+}
+
+/**
+ * Editable markdown component - shows markdown rendered, click to edit raw
+ */
+function EditableMarkdown({ content, onSave }: { content: string; onSave: (newValue: string) => void }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [editValue, setEditValue] = useState(content);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (isEditing && textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [isEditing]);
+
+  useEffect(() => {
+    setEditValue(content);
+  }, [content]);
+
+  const handleSave = () => {
+    setIsEditing(false);
+    if (editValue !== content) {
+      onSave(editValue);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setEditValue(content);
+      setIsEditing(false);
+    } else if (e.key === 'Enter' && e.metaKey) {
+      handleSave();
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+        <textarea
+          ref={textareaRef}
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={handleSave}
+          onKeyDown={handleKeyDown}
+          className="w-full p-3 text-sm text-gray-800 bg-white border-2 border-[#7C3AED] rounded-lg focus:outline-none resize-none font-mono"
+          rows={Math.max(10, editValue.split('\n').length + 2)}
+        />
+        <p className="text-xs text-gray-400 mt-2">Press Cmd+Enter to save, Escape to cancel</p>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm relative group cursor-pointer"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onClick={() => setIsEditing(true)}
+    >
+      <MarkdownRenderer content={content} />
+      {isHovered && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsEditing(true);
+          }}
+          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-[#7C3AED] hover:bg-purple-50 rounded transition-colors"
+          title="Edit"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+          </svg>
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -635,6 +716,20 @@ function formatFieldName(key: string): string {
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ')
     .trim();
+}
+
+/**
+ * Get the path to use when updating markdown content.
+ * Returns ['content'] if it's an object with content key, [] for plain string.
+ */
+function getMarkdownPath(output: any): string[] {
+  if (output && typeof output === 'object' && !Array.isArray(output)) {
+    const keys = Object.keys(output);
+    if (keys.length === 1 && keys[0] === 'content' && typeof output.content === 'string') {
+      return ['content'];
+    }
+  }
+  return [];
 }
 
 /**
