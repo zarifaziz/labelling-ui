@@ -22,7 +22,7 @@ export function Sidebar() {
 
   if (items.length === 0) {
     return (
-      <aside className="w-56 bg-white border-r border-gray-200 flex flex-col shadow-sm">
+      <aside className="h-full bg-white border-r border-gray-200 flex flex-col shadow-sm">
         <div className="p-4 border-b border-gray-200">
           <h2 className="text-sm font-semibold text-gray-700">Examples</h2>
         </div>
@@ -36,7 +36,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="w-56 bg-white border-r border-gray-200 flex flex-col shadow-sm">
+    <aside className="h-full bg-white border-r border-gray-200 flex flex-col shadow-sm">
       <div className="p-4 border-b border-gray-200">
         <h2 className="text-sm font-semibold text-gray-700">
           Examples ({items.length})
