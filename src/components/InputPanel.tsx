@@ -8,7 +8,7 @@ export function InputPanel() {
 
   if (!selectedItem) {
     return (
-      <aside className="w-72 bg-gray-50 border-r border-gray-200 p-5">
+      <aside className="h-full bg-gray-50 border-r border-gray-200 p-5">
         <h2 className="text-sm font-semibold text-gray-700 mb-3">Inputs</h2>
         <p className="text-sm text-gray-500">Select an example to view inputs</p>
       </aside>
@@ -20,7 +20,7 @@ export function InputPanel() {
   );
 
   return (
-    <aside className="w-72 bg-gray-50 border-r border-gray-200 flex flex-col overflow-hidden">
+    <aside className="h-full bg-gray-50 border-r border-gray-200 flex flex-col overflow-hidden">
       <div className="p-5 border-b border-gray-200">
         <h2 className="text-sm font-semibold text-gray-700">Inputs</h2>
       </div>

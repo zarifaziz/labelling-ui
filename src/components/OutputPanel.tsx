@@ -1,8 +1,8 @@
 'use client';
 
 import { useEval } from '@/context/EvalContext';
-import { renderLatex } from '@/lib/latex';
 import { EditableField } from './EditableField';
+import { MarkdownRenderer } from './MarkdownRenderer';
 
 type OnUpdateFn = (path: string[], value: string) => void;
 
@@ -11,7 +11,7 @@ export function OutputPanel() {
 
   if (!selectedItem) {
     return (
-      <main className="flex-1 bg-[#fffbf5] flex items-center justify-center">
+      <main className="h-full bg-[#fffbf5] flex items-center justify-center">
         <p className="text-gray-500">Select an example to view output</p>
       </main>
     );
@@ -21,10 +21,19 @@ export function OutputPanel() {
     updateItemField(selectedItem.id, ['output', ...path], value);
   };
 
+  // Check if output should be rendered as markdown
+  const markdownContent = getMarkdownContent(selectedItem.output);
+
   return (
-    <main className="flex-1 bg-[#fffbf5] overflow-y-auto">
+    <main className="h-full bg-[#fffbf5] overflow-y-auto">
       <div className="max-w-4xl mx-auto p-8">
-        <GenericOutputRenderer output={selectedItem.output} path={[]} onUpdate={onUpdate} />
+        {markdownContent !== null ? (
+          <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+            <MarkdownRenderer content={markdownContent} />
+          </div>
+        ) : (
+          <GenericOutputRenderer output={selectedItem.output} path={[]} onUpdate={onUpdate} />
+        )}
 
         {/* Model's Decision (collapsed by default, for reference) */}
         {(selectedItem.model_outcome || selectedItem.model_critique) && (
@@ -597,24 +606,6 @@ function findOutputKey(output: Record<string, unknown>, keys: string[]): string 
   return undefined;
 }
 
-function getOutputField(output: Record<string, unknown>, keys: string[]) {
-  const normalizedMap = new Map(
-    Object.entries(output).map(([key, value]) => [
-      normalizeFieldKey(key),
-      value,
-    ])
-  );
-
-  for (const key of keys) {
-    const normalized = normalizeFieldKey(key);
-    if (normalizedMap.has(normalized)) {
-      return normalizedMap.get(normalized);
-    }
-  }
-
-  return undefined;
-}
-
 function toOptionalString(value: unknown): string {
   if (typeof value === 'string') return value;
   if (value == null) return '';
@@ -644,4 +635,55 @@ function formatFieldName(key: string): string {
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ')
     .trim();
+}
+
+/**
+ * Check if output should be rendered as markdown and extract the content.
+ * Returns the markdown string if it should be rendered as markdown, null otherwise.
+ * 
+ * Cases:
+ * 1. Object with only a "content" key containing a string
+ * 2. Plain string that looks like markdown (has headers, lists, etc.)
+ */
+function getMarkdownContent(output: any): string | null {
+  if (output == null) return null;
+
+  // Case 1: Object with only a "content" key
+  if (typeof output === 'object' && !Array.isArray(output)) {
+    const keys = Object.keys(output);
+    if (keys.length === 1 && keys[0] === 'content' && typeof output.content === 'string') {
+      return output.content;
+    }
+  }
+
+  // Case 2: Plain string that looks like markdown
+  if (typeof output === 'string') {
+    // Check if it looks like markdown (has headers, lists, bold, etc.)
+    const markdownPatterns = [
+      /^#{1,6}\s+/m,          // Headers (# Header)
+      /^\s*[-*+]\s+/m,        // Unordered lists
+      /^\s*\d+\.\s+/m,        // Ordered lists
+      /\*\*[^*]+\*\*/,        // Bold text
+      /\*[^*]+\*/,            // Italic text
+      /^>\s+/m,               // Blockquotes
+      /```[\s\S]*?```/,       // Code blocks
+      /\[.+\]\(.+\)/,         // Links
+    ];
+
+    const looksLikeMarkdown = markdownPatterns.some(pattern => pattern.test(output));
+    
+    // Also check it's not valid JSON (i.e., it's plain text/markdown)
+    if (looksLikeMarkdown) {
+      try {
+        JSON.parse(output);
+        // If it parses as JSON, it's not markdown
+        return null;
+      } catch {
+        // Not JSON, treat as markdown
+        return output;
+      }
+    }
+  }
+
+  return null;
 }
