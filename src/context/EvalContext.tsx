@@ -1,7 +1,9 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { EvalItem } from '@/types';
+import { EvalItem, TraceItem } from '@/types';
+
+export type ViewMode = 'labelling' | 'trace';
 
 interface EvalContextType {
   items: EvalItem[];
@@ -14,22 +16,33 @@ interface EvalContextType {
   deleteItem: (id: string) => void;
   filename: string;
   setFilename: (name: string) => void;
+  // Trace-related state
+  traces: Map<string, TraceItem>;
+  setTraces: (traces: Map<string, TraceItem>) => void;
+  traceAvailable: boolean;
+  selectedTrace: TraceItem | null;
+  viewMode: ViewMode;
+  setViewMode: (mode: ViewMode) => void;
 }
 
 const EvalContext = createContext<EvalContextType | null>(null);
 
 const STORAGE_KEY = 'labelling-ui-data';
 const FILENAME_KEY = 'labelling-ui-filename';
+const VIEW_MODE_KEY = 'labelling-ui-view-mode';
 
 export function EvalProvider({ children }: { children: ReactNode }) {
   const [items, setItemsState] = useState<EvalItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filename, setFilenameState] = useState<string>('');
+  const [traces, setTracesState] = useState<Map<string, TraceItem>>(new Map());
+  const [viewMode, setViewModeState] = useState<ViewMode>('labelling');
 
   // Load from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     const savedFilename = localStorage.getItem(FILENAME_KEY);
+    const savedViewMode = localStorage.getItem(VIEW_MODE_KEY);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -43,6 +56,9 @@ export function EvalProvider({ children }: { children: ReactNode }) {
     }
     if (savedFilename) {
       setFilenameState(savedFilename);
+    }
+    if (savedViewMode === 'trace' || savedViewMode === 'labelling') {
+      setViewModeState(savedViewMode);
     }
   }, []);
 
@@ -58,6 +74,18 @@ export function EvalProvider({ children }: { children: ReactNode }) {
       localStorage.setItem(FILENAME_KEY, filename);
     }
   }, [filename]);
+
+  useEffect(() => {
+    localStorage.setItem(VIEW_MODE_KEY, viewMode);
+  }, [viewMode]);
+
+  const setTraces = useCallback((newTraces: Map<string, TraceItem>) => {
+    setTracesState(newTraces);
+  }, []);
+
+  const setViewMode = useCallback((mode: ViewMode) => {
+    setViewModeState(mode);
+  }, []);
 
   const setItems = useCallback((newItems: EvalItem[]) => {
     setItemsState(newItems);
@@ -109,6 +137,8 @@ export function EvalProvider({ children }: { children: ReactNode }) {
   }, [selectedId]);
 
   const selectedItem = items.find((item) => item.id === selectedId) || null;
+  const traceAvailable = traces.size > 0;
+  const selectedTrace = selectedId ? traces.get(selectedId) || null : null;
 
   return (
     <EvalContext.Provider
@@ -123,6 +153,12 @@ export function EvalProvider({ children }: { children: ReactNode }) {
         deleteItem,
         filename,
         setFilename,
+        traces,
+        setTraces,
+        traceAvailable,
+        selectedTrace,
+        viewMode,
+        setViewMode,
       }}
     >
       {children}

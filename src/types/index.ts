@@ -47,3 +47,10 @@ export interface RawEvalItem {
 }
 
 export type LabelStatus = 'unlabeled' | 'pass' | 'fail';
+
+export interface TraceItem {
+  id: string;
+  input_trace: string;
+  output_trace: string;
+  [key: string]: string | number | boolean | undefined;
+}
