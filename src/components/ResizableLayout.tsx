@@ -109,15 +109,14 @@ export function ResizableLayout({ panels, className = '' }: ResizableLayoutProps
     };
 
     // Set cursor style on body during drag
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
+    const body = document.body;
+    body.classList.add('resizing-panels');
 
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
-    
+
     return () => {
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
+      body.classList.remove('resizing-panels');
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
@@ -127,22 +126,29 @@ export function ResizableLayout({ panels, className = '' }: ResizableLayoutProps
     <div className={`flex h-full ${className}`}>
       {panels.map((panel, index) => {
         const isFlexPanel = index === flexPanelIndex;
-        
+
         return (
-          <div key={panel.id} className="flex h-full">
+          <div
+            key={panel.id}
+            className="flex h-full"
+            style={{
+              flex: isFlexPanel ? '1 1 0%' : '0 0 auto',
+              minWidth: isFlexPanel ? `${panel.minWidth}px` : undefined,
+            }}
+          >
             {/* Panel content */}
-            <div 
+            <div
               className="h-full overflow-hidden"
-              style={{ 
-                width: isFlexPanel ? undefined : `${widths[index]}px`,
+              style={{
+                width: isFlexPanel ? '100%' : `${widths[index]}px`,
                 flex: isFlexPanel ? 1 : undefined,
-                minWidth: `${panel.minWidth}px`,
+                minWidth: isFlexPanel ? undefined : `${panel.minWidth}px`,
                 maxWidth: panel.maxWidth ? `${panel.maxWidth}px` : undefined,
               }}
             >
               {panel.content}
             </div>
-            
+
             {/* Divider (not after the last panel) */}
             {index < panels.length - 1 && (
               <div
