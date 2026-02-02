@@ -2,6 +2,14 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { EvalItem, TraceItem } from '@/types';
+import {
+  loadItems,
+  saveItems,
+  loadFilename,
+  saveFilename,
+  loadViewMode,
+  saveViewMode,
+} from '@/lib/indexedDb';
 
 export type ViewMode = 'labelling' | 'trace';
 
@@ -38,8 +46,33 @@ export function EvalProvider({ children }: { children: ReactNode }) {
   const [traces, setTracesState] = useState<Map<string, TraceItem>>(new Map());
   const [viewMode, setViewModeState] = useState<ViewMode>('labelling');
 
-  // Load from localStorage on mount
+  // Load from persistence on mount
   useEffect(() => {
+    if (typeof indexedDB !== 'undefined') {
+      (async () => {
+        try {
+          const [savedItems, savedFilename, savedViewMode] = await Promise.all([
+            loadItems(),
+            loadFilename(),
+            loadViewMode(),
+          ]);
+          if (savedItems && savedItems.length > 0) {
+            setItemsState(savedItems);
+            setSelectedId(savedItems[0].id);
+          }
+          if (savedFilename) {
+            setFilenameState(savedFilename);
+          }
+          if (savedViewMode === 'trace' || savedViewMode === 'labelling') {
+            setViewModeState(savedViewMode);
+          }
+        } catch (error) {
+          console.error('Failed to load data from IndexedDB:', error);
+        }
+      })();
+      return;
+    }
+
     const saved = localStorage.getItem(STORAGE_KEY);
     const savedFilename = localStorage.getItem(FILENAME_KEY);
     const savedViewMode = localStorage.getItem(VIEW_MODE_KEY);
@@ -62,21 +95,57 @@ export function EvalProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Save to localStorage when items change
+  // Save to persistence when items change
   useEffect(() => {
     if (items.length > 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      if (typeof indexedDB !== 'undefined') {
+        saveItems(items).catch((error) => {
+          console.error('Failed to persist data to IndexedDB:', error);
+        });
+        return;
+      }
+
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      } catch (error) {
+        console.error('Failed to persist data to localStorage:', error);
+        localStorage.removeItem(STORAGE_KEY);
+      }
     }
   }, [items]);
 
   useEffect(() => {
     if (filename) {
-      localStorage.setItem(FILENAME_KEY, filename);
+      if (typeof indexedDB !== 'undefined') {
+        saveFilename(filename).catch((error) => {
+          console.error('Failed to persist filename to IndexedDB:', error);
+        });
+        return;
+      }
+
+      try {
+        localStorage.setItem(FILENAME_KEY, filename);
+      } catch (error) {
+        console.error('Failed to persist filename to localStorage:', error);
+        localStorage.removeItem(FILENAME_KEY);
+      }
     }
   }, [filename]);
 
   useEffect(() => {
-    localStorage.setItem(VIEW_MODE_KEY, viewMode);
+    if (typeof indexedDB !== 'undefined') {
+      saveViewMode(viewMode).catch((error) => {
+        console.error('Failed to persist view mode to IndexedDB:', error);
+      });
+      return;
+    }
+
+    try {
+      localStorage.setItem(VIEW_MODE_KEY, viewMode);
+    } catch (error) {
+      console.error('Failed to persist view mode to localStorage:', error);
+      localStorage.removeItem(VIEW_MODE_KEY);
+    }
   }, [viewMode]);
 
   const setTraces = useCallback((newTraces: Map<string, TraceItem>) => {

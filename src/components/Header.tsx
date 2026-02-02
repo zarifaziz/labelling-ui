@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import { useEval } from '@/context/EvalContext';
 import { parseCSV, exportCSV, downloadCSV } from '@/lib/csv';
+import { clearAllPersistedData } from '@/lib/indexedDb';
 import { fetchGoogleSheet } from '@/lib/sheets';
 import { parseParquet } from '@/lib/parquet';
 import { TraceItem } from '@/types';
@@ -103,6 +104,9 @@ export function Header() {
       setTraces(new Map());
       setViewMode('labelling');
       setTraceLoadError(null);
+      clearAllPersistedData().catch((error) => {
+        console.error('Failed to clear IndexedDB data:', error);
+      });
       localStorage.removeItem('labelling-ui-data');
       localStorage.removeItem('labelling-ui-filename');
     }
