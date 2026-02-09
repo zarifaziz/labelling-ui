@@ -127,7 +127,7 @@ function EditableMarkdown({ content, onSave }: { content: string; onSave: (newVa
       className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm relative group cursor-pointer"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onClick={() => setIsEditing(true)}
+      onDoubleClick={() => setIsEditing(true)}
     >
       <MarkdownRenderer content={content} />
       {isHovered && (
