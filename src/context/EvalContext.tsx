@@ -11,7 +11,7 @@ import {
   saveViewMode,
 } from '@/lib/indexedDb';
 
-export type ViewMode = 'labelling' | 'trace';
+export type ViewMode = 'labelling' | 'trace' | 'stats';
 
 interface EvalContextType {
   items: EvalItem[];
@@ -63,7 +63,7 @@ export function EvalProvider({ children }: { children: ReactNode }) {
           if (savedFilename) {
             setFilenameState(savedFilename);
           }
-          if (savedViewMode === 'trace' || savedViewMode === 'labelling') {
+          if (savedViewMode === 'trace' || savedViewMode === 'labelling' || savedViewMode === 'stats') {
             setViewModeState(savedViewMode);
           }
         } catch (error) {
@@ -90,7 +90,7 @@ export function EvalProvider({ children }: { children: ReactNode }) {
     if (savedFilename) {
       setFilenameState(savedFilename);
     }
-    if (savedViewMode === 'trace' || savedViewMode === 'labelling') {
+    if (savedViewMode === 'trace' || savedViewMode === 'labelling' || savedViewMode === 'stats') {
       setViewModeState(savedViewMode);
     }
   }, []);

@@ -6,6 +6,7 @@ import { InputPanel } from '@/components/InputPanel';
 import { OutputPanel } from '@/components/OutputPanel';
 import { LabelPanel } from '@/components/LabelPanel';
 import { TracePanel } from '@/components/TracePanel';
+import { StatsPanel } from '@/components/stats/StatsPanel';
 import { StatusBar } from '@/components/StatusBar';
 import { ResizableLayout } from '@/components/ResizableLayout';
 import { useEval } from '@/context/EvalContext';
@@ -59,13 +60,29 @@ export default function Home() {
     },
   ];
 
+  const statsPanels = [
+    {
+      id: 'sidebar',
+      minWidth: 120,
+      defaultWidth: 224,
+      maxWidth: 400,
+      content: <Sidebar />,
+    },
+    {
+      id: 'stats',
+      minWidth: 400,
+      defaultWidth: 0, // Will flex to fill
+      content: <StatsPanel />,
+    },
+  ];
+
   return (
     <div className="h-screen flex flex-col bg-[#fffbf5]">
       <Header />
       <div className="flex-1 overflow-hidden">
         <ResizableLayout
           key={viewMode} // Force re-render when switching modes
-          panels={viewMode === 'trace' ? tracePanels : labellingPanels}
+          panels={viewMode === 'stats' ? statsPanels : viewMode === 'trace' ? tracePanels : labellingPanels}
         />
       </div>
       <StatusBar />

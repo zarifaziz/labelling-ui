@@ -156,6 +156,16 @@ export function Header() {
                 Trace
                 {!traceAvailable && <span className="text-[10px]">+</span>}
               </button>
+              <button
+                onClick={() => setViewMode('stats')}
+                className={`px-2.5 py-1 text-xs rounded transition-all font-medium ${
+                  viewMode === 'stats'
+                    ? 'bg-white text-[#4A1D96]'
+                    : 'text-white hover:bg-white/10'
+                }`}
+              >
+                Stats
+              </button>
             </div>
           )}
 
