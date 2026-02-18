@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { EvalProvider } from "@/context/EvalContext";
+import { CurateProvider } from "@/context/CurateContext";
+import { AppModeProvider } from "@/context/AppModeContext";
 
 const inter = Inter({
   variable: "--font-geist-sans",
@@ -14,8 +16,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Eval Labeller",
-  description: "Custom annotation tool for AI evaluation data",
+  title: "Data Review Tool",
+  description: "Review AI evaluation data and curate prompt examples",
 };
 
 export default function RootLayout({
@@ -28,7 +30,11 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}
       >
-        <EvalProvider>{children}</EvalProvider>
+        <AppModeProvider>
+          <EvalProvider>
+            <CurateProvider>{children}</CurateProvider>
+          </EvalProvider>
+        </AppModeProvider>
       </body>
     </html>
   );
