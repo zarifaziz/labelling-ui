@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 import { EvalProvider } from "@/context/EvalContext";
 import { CurateProvider } from "@/context/CurateContext";
@@ -30,6 +31,7 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}
       >
+        <Analytics />
         <AppModeProvider>
           <EvalProvider>
             <CurateProvider>{children}</CurateProvider>
