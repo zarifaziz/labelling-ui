@@ -87,15 +87,36 @@ export interface ImportResult {
   schema: string;
 }
 
+/**
+ * Discover the first real (non-internal) table name in the database.
+ * Skips sqlite_* internal tables.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function discoverTableName(db: any): string {
+  const result = db.exec(
+    "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' LIMIT 1"
+  );
+  const name = result[0]?.values[0]?.[0] as string | undefined;
+  if (!name) throw new Error('No tables found in SQLite file');
+  return name;
+}
+
+/** Quote a table name to handle hyphens and other special characters */
+function q(tableName: string): string {
+  return `"${tableName.replace(/"/g, '""')}"`;
+}
+
 export async function importSqlite(file: File): Promise<ImportResult> {
   const SqlJs = await getSQL();
   const buffer = await file.arrayBuffer();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db: any = new SqlJs.Database(new Uint8Array(buffer));
 
+  const tableName = discoverTableName(db);
+
   // Capture the original CREATE TABLE DDL for faithful export
   const schemaResult = db.exec(
-    "SELECT sql FROM sqlite_master WHERE type='table' AND name='prompt_examples'"
+    `SELECT sql FROM sqlite_master WHERE type='table' AND name='${tableName.replace(/'/g, "''")}'`
   );
   const schema = schemaResult[0]?.values[0]?.[0] as string ?? '';
 
@@ -108,7 +129,7 @@ export async function importSqlite(file: File): Promise<ImportResult> {
 
   // Use prepare/step API to avoid minified property names from exec()
   // (Turbopack may mangle `columns` to `lc` in the exec() result objects)
-  const stmt = db.prepare('SELECT * FROM prompt_examples');
+  const stmt = db.prepare(`SELECT * FROM ${q(tableName)}`);
   const columns: string[] = stmt.getColumnNames();
   const rows: unknown[][] = [];
   while (stmt.step()) {
@@ -153,8 +174,12 @@ export async function exportSqlite(
     }
   }
 
+  // Extract table name from CREATE TABLE schema DDL
+  const tableNameMatch = schema.match(/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?["`]?([^"`(\s]+)["`]?/i);
+  const exportTableName = tableNameMatch?.[1] ?? 'prompt_examples';
+
   const placeholders = CURATE_COLUMNS.map(() => '?').join(', ');
-  const insertSQL = `INSERT INTO prompt_examples (${CURATE_COLUMNS.join(', ')}) VALUES (${placeholders})`;
+  const insertSQL = `INSERT INTO ${q(exportTableName)} (${CURATE_COLUMNS.join(', ')}) VALUES (${placeholders})`;
 
   for (const item of items) {
     if (item._deleted) continue;
