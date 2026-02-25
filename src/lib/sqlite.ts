@@ -67,15 +67,15 @@ function curateItemToRow(item: CurateItem): unknown[] {
   return CURATE_COLUMNS.map((col) => {
     switch (col) {
       case 'example_output_json':
-        return JSON.stringify(item.example_output_json);
+        return JSON.stringify(item.example_output_json ?? {});
       case 'skills':
-        return JSON.stringify(item.skills);
+        return JSON.stringify(item.skills ?? []);
       case 'skill_ids':
-        return JSON.stringify(item.skill_ids);
+        return JSON.stringify(item.skill_ids ?? []);
       case 'subtopics':
-        return JSON.stringify(item.subtopics);
+        return JSON.stringify(item.subtopics ?? []);
       case 'subtopic_ids':
-        return JSON.stringify(item.subtopic_ids);
+        return JSON.stringify(item.subtopic_ids ?? []);
       default:
         return item[col as keyof CurateItem] ?? '';
     }
@@ -160,8 +160,14 @@ export async function exportSqlite(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db: any = new SqlJs.Database();
 
+  // Relax NOT NULL constraints in the schema DDL.
+  // The export only populates CURATE_COLUMNS, so extra NOT NULL columns
+  // in the original schema (that we don't carry data for) would cause
+  // insert failures.  Stripping NOT NULL makes the export resilient.
+  const relaxedSchema = schema.replace(/\bNOT\s+NULL\b/gi, '');
+
   // Split schema into individual statements and execute each
-  const statements = schema
+  const statements = relaxedSchema
     .split(';')
     .map((s) => s.trim())
     .filter(Boolean);
